@@ -32,7 +32,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v1.1.0 *> $null
-          if ($LASTEXITCODE -eq 0) { throw 'Release v1.1.0 already exists; use a new version for subsequent releases.' }
-          gh release create v1.1.0 .\dist\NosClicker.exe .\dist\SHA256SUMS.txt --target $env:GITHUB_SHA --title 'NOS Clicker 1.1.0' --notes 'Windows 10/11 portable EXE. ЛКМ/ПКМ, новый режим удержания кнопки, улучшенная отзывчивость интерфейса, 1–1000 CPS, без лимита, переназначение глобальной клавиши, Esc для остановки, сохранение настроек. Скачайте NosClicker.exe из Assets. Файл без цифровой подписи.'
+          gh release view v1.2.0 *> $null
+          if ($LASTEXITCODE -eq 0) { throw 'Release v1.2.0 already exists; use a new version for subsequent releases.' }
+          gh release create v1.2.0 .\dist\NosClicker.exe .\dist\SHA256SUMS.txt --target $env:GITHUB_SHA --title 'NOS Clicker 1.2.0' --notes 'Windows 10/11 portable EXE. ЛКМ/ПКМ, исправлено удержание: F6 зажимает, повторная F6 или Esc отпускает; удержание по умолчанию, 1–1000 CPS, без лимита, переназначение глобальной клавиши, Esc для остановки, сохранение настроек. Скачайте NosClicker.exe из Assets. Файл без цифровой подписи.'
           if ($LASTEXITCODE -ne 0) { throw 'Release failed' }

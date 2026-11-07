@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: System.Reflection.AssemblyVersion("1.1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.2.0.0")]
 namespace NosClicker {
 static class Program {
  [STAThread] static int Main(string[] args) {
@@ -40,7 +40,7 @@ sealed class Engine : IDisposable {
   thread=new Thread(delegate(){ bool held=false; bool precise=Native.timeBeginPeriod(1)==0;
    try { double next=Stopwatch.GetTimestamp(); int batch=0;
     while(!cancel.WaitOne(0)) {
-     if(foreground()==own) {
+     if(!hold&&foreground()==own) {
       if(held){if(send(1,up,size)!=1){Failed=true;break;}held=false;}
       if(cancel.WaitOne(10))break;next=Stopwatch.GetTimestamp();continue;
      }
@@ -66,7 +66,7 @@ sealed class MainForm : Form {
  void ButtonStyle(Button b){b.FlatStyle=FlatStyle.Flat;b.FlatAppearance.BorderSize=0;b.BackColor=panel;b.ForeColor=Color.White;b.Cursor=Cursors.Hand;b.Font=new Font("Segoe UI",11,FontStyle.Bold);Controls.Add(b);}
  internal MainForm(){
   Text="NOS / Clicker"; ClientSize=new Size(460,646); DoubleBuffered=true; FormBorderStyle=FormBorderStyle.FixedSingle; MaximizeBox=false; StartPosition=FormStartPosition.CenterScreen; BackColor=Color.FromArgb(17,26,21); ForeColor=Color.White; Font=new Font("Segoe UI",11); KeyPreview=true;
-  TextAt("NOS",30,24,200,32,mint); TextAt("CLICKER  /  1.1",32,83,300,10,muted);
+  TextAt("NOS",30,24,200,32,mint); TextAt("CLICKER  /  1.2",32,83,300,10,muted);
   TextAt("Меньше действий. Больше кликов.",32,118,400,14,Color.White);
   TextAt("01  /  КНОПКА МЫШИ",32,174,390,10,muted);
   left.Text="ЛКМ";right.Text="ПКМ";left.Checked=true;left.SetBounds(32,208,180,38);right.SetBounds(240,208,180,38);Controls.Add(left);Controls.Add(right);
@@ -80,7 +80,7 @@ sealed class MainForm : Form {
   start.SetBounds(32,468,396,54);ButtonStyle(start);start.BackColor=mint;start.ForeColor=BackColor;start.Click+=delegate{Toggle();};
   status.SetBounds(32,539,230,25);status.ForeColor=muted;Controls.Add(status);counter.SetBounds(270,539,158,25);counter.TextAlign=ContentAlignment.TopRight;counter.ForeColor=muted;Controls.Add(counter);
   foreach(Control control in Controls) if(control.Top>=267) control.Top+=66;
-  mode.DropDownStyle=ComboBoxStyle.DropDownList;mode.Items.AddRange(new object[]{"Повторные клики","Удерживать кнопку"});mode.SelectedIndex=0;mode.SetBounds(32,263,396,32);mode.BackColor=panel;mode.ForeColor=mint;Controls.Add(mode);mode.SelectedIndexChanged+=delegate{UpdateState();};
+  mode.DropDownStyle=ComboBoxStyle.DropDownList;mode.Items.AddRange(new object[]{"Повторные клики","Удерживать кнопку"});mode.SelectedIndex=1;mode.SetBounds(32,263,396,32);mode.BackColor=panel;mode.ForeColor=mint;Controls.Add(mode);mode.SelectedIndexChanged+=delegate{UpdateState();};
   LoadSettings(); timer.Interval=100;timer.Tick+=delegate{counter.Text=Interlocked.Read(ref engine.Count).ToString("N0")+" кликов";if((active||stopping)&&!engine.Running){active=false;stopping=false;UpdateState();if(engine.Failed)status.Text="Ошибка ввода / прав доступа";}};timer.Start();UpdateState();
  }
  protected override void OnHandleCreated(EventArgs e){base.OnHandleCreated(e);if(!Native.RegisterHotKey(Handle,1,0x4000,(uint)hotkey)){status.Text="Клавиша занята — смените";}Native.RegisterHotKey(Handle,2,0x4000,(uint)Keys.Escape);}
@@ -90,14 +90,14 @@ sealed class MainForm : Form {
  void Toggle(){if(stopping)return;if(active){Stop();return;}capturing=false;engine.Start(right.Checked,(int)cps.Value,unlimited.Checked,mode.SelectedIndex==1,Handle);active=true;UpdateState();}
  void Stop(){engine.Stop();active=false;stopping=engine.Running;UpdateState();}
  void UpdateState(){bool idle=!active&&!stopping;bool hold=mode.SelectedIndex==1;bind.Text=capturing?"Нажмите…":hotkey.ToString();start.Text=stopping?"Останавливаем…":active?"■   Остановить":hold?"▶   Начать удержание":"▶   Начать кликать";start.Enabled=!stopping;status.Text=stopping?"Отпускаем кнопку…":active?hold?"● Удержание активно":"● Клики активны":"○ Готов к работе";left.Enabled=right.Enabled=mode.Enabled=idle;unlimited.Enabled=idle&&!hold;cps.Enabled=idle&&!hold&&!unlimited.Checked;}
- void LoadSettings(){try{var s=File.ReadAllLines(config);Keys k;if(s.Length>=4&&Enum.TryParse<Keys>(s[0],out k)&&Enum.IsDefined(typeof(Keys),k)&&k!=Keys.Escape){hotkey=k;cps.Value=Math.Max(1,Math.Min(1000,int.Parse(s[1])));right.Checked=bool.Parse(s[2]);unlimited.Checked=bool.Parse(s[3]);if(s.Length>=5)mode.SelectedIndex=s[4]=="hold"?1:0;}}catch{} }
- protected override void OnFormClosed(FormClosedEventArgs e){timer.Stop();timer.Dispose();engine.Dispose();try{Directory.CreateDirectory(Path.GetDirectoryName(config));File.WriteAllLines(config,new[]{hotkey.ToString(),cps.Value.ToString(),right.Checked.ToString(),unlimited.Checked.ToString(),mode.SelectedIndex==1?"hold":"click"});}catch{}base.OnFormClosed(e);}
+ void LoadSettings(){try{var s=File.ReadAllLines(config);Keys k;if(s.Length>=4&&Enum.TryParse<Keys>(s[0],out k)&&Enum.IsDefined(typeof(Keys),k)&&k!=Keys.Escape){hotkey=k;cps.Value=Math.Max(1,Math.Min(1000,int.Parse(s[1])));right.Checked=bool.Parse(s[2]);unlimited.Checked=bool.Parse(s[3]);if(s.Length>=6&&s[5]=="v1.2")mode.SelectedIndex=s[4]=="hold"?1:0;}}catch{} }
+ protected override void OnFormClosed(FormClosedEventArgs e){timer.Stop();timer.Dispose();engine.Dispose();try{Directory.CreateDirectory(Path.GetDirectoryName(config));File.WriteAllLines(config,new[]{hotkey.ToString(),cps.Value.ToString(),right.Checked.ToString(),unlimited.Checked.ToString(),mode.SelectedIndex==1?"hold":"click","v1.2"});}catch{}base.OnFormClosed(e);}
 }
 static class Tests {
  static void HoldTest(bool right,bool fail){
   int downs=0,ups=0;var pair=Native.Pair(right);var pressed=new ManualResetEvent(false);
   using(var engine=new Engine(delegate(uint count,Native.INPUT[] input,int size){uint f=input[0].data.mouse.flags;if(f==pair[0].data.mouse.flags){Interlocked.Increment(ref downs);pressed.Set();return fail?0u:count;}if(f==pair[1].data.mouse.flags)Interlocked.Increment(ref ups);return count;},delegate{return new IntPtr(123);})){
-   engine.Start(right,20,false,true,IntPtr.Zero);if(!pressed.WaitOne(2000))throw new Exception("hold did not start");engine.Stop();
+   engine.Start(right,20,false,true,new IntPtr(123));if(!pressed.WaitOne(2000))throw new Exception("hold did not start in own foreground window");if(!fail){Thread.Sleep(100);if(downs!=1||ups!=0||Interlocked.Read(ref engine.Count)!=0)throw new Exception("hold emitted repeat or premature release");}engine.Stop();
   }
   pressed.Dispose();if(downs!=1||ups!=1)throw new Exception("hold must press once and release once");
  }
